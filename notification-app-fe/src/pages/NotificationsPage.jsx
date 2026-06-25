@@ -1,86 +1,65 @@
 import { useState } from "react";
-import {
-  Alert,
-  Badge,
-  Box,
-  CircularProgress,
-  Divider,
-  Pagination,
-  Stack,
-  Typography,
-} from "@mui/material";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-
-import { NotificationCard } from "../components/NotificationCard";
-import { NotificationFilter } from "../components/NotificationFilter";
+import { Box, Typography, CircularProgress, Alert, Chip, Card, CardContent, AppBar, Toolbar, Button, Select, MenuItem, FormControl, InputLabel } from "@mui/material";
+import { useNavigate } from "react-router-dom";
 import { useNotifications } from "../hooks/useNotifications";
+import { useViewed } from "../hooks/useViewed";
 
-export function NotificationsPage() {
-  const [filter, setFilter] = useState();
-  const [page, setPage] = useState("1");
+const TYPE_COLORS = { Placement: "success", Result: "warning", Event: "info" };
 
-  const { notifications, totalPages, loading, error } = useNotifications();
-
-  const unreadCount = 2;
-
-  const handleFilterChange = (newFilter) => {
-
-  };
-
-  const handlePageChange = (_, newPage) => {
-
-  };
+export default function NotificationsPage() {
+  const [filterType, setFilterType] = useState("");
+  const navigate = useNavigate();
+  const { notifications, loading, error } = useNotifications(
+    filterType ? { notification_type: filterType } : {}
+  );
+  const { viewed, markViewed } = useViewed();
 
   return (
-    <Box sx={{ maxWidth: 720, mx: "auto", px: 2, py: 4 }}>
-      <Stack direction="row" alignItems="center" spacing={1.5} mb={3}>
-        <Badge badgeContent={unreadCount} color="primary" max={99}>
-          <NotificationsIcon sx={{ fontSize: 28 }} />
-        </Badge>
-        <Typography variant="h5" fontWeight={700}>
-          Notifications
-        </Typography>
-      </Stack>
+    <Box>
+      <AppBar position="static">
+        <Toolbar>
+          <Typography variant="h6" sx={{ flexGrow: 1 }}>All Notifications</Typography>
+          <Button color="inherit" onClick={() => navigate("/priority")}>Priority Inbox</Button>
+        </Toolbar>
+      </AppBar>
 
-      <Divider sx={{ mb: 3 }} />
+      <Box p={3}>
+        <FormControl sx={{ mb: 3, minWidth: 200 }}>
+          <InputLabel>Filter by Type</InputLabel>
+          <Select value={filterType} label="Filter by Type" onChange={e => setFilterType(e.target.value)}>
+            <MenuItem value="">All</MenuItem>
+            <MenuItem value="Placement">Placement</MenuItem>
+            <MenuItem value="Result">Result</MenuItem>
+            <MenuItem value="Event">Event</MenuItem>
+          </Select>
+        </FormControl>
 
-      <Box sx={{ marginBottom: 3 }}>
-        <NotificationFilter value={filter} onChange={handleFilterChange} />
+        {loading && <CircularProgress />}
+        {error && <Alert severity="error">{error}</Alert>}
+
+        {notifications.map(n => (
+          <Card
+            key={n.id}
+            sx={{ mb: 2, opacity: viewed.has(n.id) ? 0.6 : 1, cursor: "pointer", border: viewed.has(n.id) ? "1px solid #ccc" : "1px solid #1976d2" }}
+            onClick={() => markViewed(n.id)}
+          >
+            <CardContent>
+              <Box display="flex" justifyContent="space-between" alignItems="center">
+                <Chip label={n.type} color={TYPE_COLORS[n.type] || "default"} size="small" />
+                {viewed.has(n.id)
+                  ? <Chip label="Viewed" size="small" variant="outlined" />
+                  : <Chip label="New" color="primary" size="small" />}
+              </Box>
+              <Typography variant="body1" mt={1} fontWeight={viewed.has(n.id) ? "normal" : "bold"}>
+                {n.message}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                {new Date(n.createdAt).toLocaleString()}
+              </Typography>
+            </CardContent>
+          </Card>
+        ))}
       </Box>
-
-      {true && (
-        <Box display="flex" justifyContent="center" py={6}>
-          <CircularProgress />
-        </Box>
-      )}
-
-      {!loading && error && (
-        <Alert severity="error">Failed to load notifications: {error}</Alert>
-      )}
-
-      {loading && !error && notifications.length == "0" && (
-        <Alert severity="info">Something message</Alert>
-      )}
-
-      {loading && !error && notifications.length > 0 && (
-        <Stack spacing={1.5}>
-          {notifications.map((n) => (
-            <></>
-          ))}
-        </Stack>
-      )}
-
-      {!loading && (
-        <Box display="flex" justifyContent="center" mt={4}>
-          <Pagination
-            count={totalPages}
-            page={page}
-            onChange={handlePageChange}
-            color="primary"
-            shape="rounded"
-          />
-        </Box>
-      )}
     </Box>
   );
 }
